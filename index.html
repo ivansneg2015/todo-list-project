@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ToDo List</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+    }
+    #todo-list {
+        list-style-type: none;
+        padding: 0;
+    }
+    .task {
+        margin-bottom: 5px;
+    }
+    .task button {
+        margin-left: 5px;
+    }
+    .completed {
+        text-decoration: line-through;
+        opacity: 0.5;
+    }
+</style>
+</head>
+<body>
+    <h1>ToDo List</h1>
+    <input type="text" id="task-input" placeholder="Enter task...">
+    <button id="add-task-btn">Add Task</button>
+    <button class="filter-btn" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="completed">Completed</button>
+    <button class="filter-btn" data-filter="active">Active</button>
+    <button id="clear-all-btn">Clear All</button>
+    <ul id="todo-list"></ul>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const taskInput = document.getElementById('task-input');
+            const addTaskButton = document.getElementById('add-task-btn');
+            const clearAllButton = document.getElementById('clear-all-btn');
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            const todoList = document.getElementById('todo-list');
+
+            function fetchTasks() {
+                fetch('/tasks')
+                    .then(response => response.json())
+                    .then(tasks => {
+                        todoList.innerHTML = '';
+                        tasks.forEach(task => addTask(task.text, task.id, task.completed));
+                    });
+            }
+
+            fetchTasks();
+
+            addTaskButton.addEventListener('click', function() {
+                const taskText = taskInput.value.trim();
+                if (taskText !== '') {
+                    fetch('/tasks', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ text: taskText })
+                    })
+                    .then(response => response.json())
+                    .then(task => {
+                        addTask(task.text, task.id, task.completed);
+                        taskInput.value = '';
+                    });
+                }
+            });
+
+            taskInput.addEventListener('keypress', function(event) {
+                if (event.key === 'Enter') {
+                    addTaskButton.click();
+                }
+            });
+
+            clearAllButton.addEventListener('click', function() {
+                      if (confirm('Are you sure you want to clear all tasks?')) {
+                          fetch('/tasks', { method: 'DELETE' })
+                           .then(() => {
+                       todoList.innerHTML = ''; // Очистить список задач на клиенте
+                             fetchTasks(); // Обновить список задач после успешного удаления
+                      });
+                    }
+                  });
+
+
+            filterButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const filter = button.dataset.filter;
+                    fetch(`/tasks?filter=${filter}`)
+                        .then(response => response.json())
+                        .then(tasks => {
+                            todoList.innerHTML = '';
+                            tasks.forEach(task => addTask(task.text, task.id, task.completed));
+                        });
+                });
+            });
+
+            function addTask(taskText, taskId, completed = false) {
+                const taskItem = document.createElement('li');
+                taskItem.classList.add('task');
+                taskItem.dataset.taskId = taskId;
+
+                if (completed) {
+                    taskItem.classList.add('completed');
+                }
+
+                taskItem.innerHTML = `
+                    <span>${taskText}</span>
+                    <button class="delete-btn">Delete</button>
+                    <button class="complete-btn">Complete</button>
+                `;
+                todoList.appendChild(taskItem);
+
+                // Добавляем обработчик для кнопки завершения задачи
+                const completeButton = taskItem.querySelector('.complete-btn');
+                completeButton.addEventListener('click', function() {
+                    taskItem.classList.toggle('completed');
+                    const taskId = taskItem.dataset.taskId;
+                    fetch(`/tasks/${taskId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ completed: taskItem.classList.contains('completed') })
+                    });
+                });
+
+                // Добавляем обработчик для редактирования задачи
+                const taskTextElement = taskItem.querySelector('span');
+                taskTextElement.addEventListener('click', function() {
+                    const newText = prompt('Enter new task text:', taskTextElement.textContent);
+                    if (newText !== null && newText !== taskTextElement.textContent) {
+                        taskTextElement.textContent = newText;
+                        fetch(`/tasks/${taskId}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ text: newText })
+                        });
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
+
