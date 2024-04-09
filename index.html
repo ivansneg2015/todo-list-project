@@ -78,15 +78,14 @@
             });
 
             clearAllButton.addEventListener('click', function() {
-                      if (confirm('Are you sure you want to clear all tasks?')) {
-                          fetch('/tasks', { method: 'DELETE' })
-                           .then(() => {
-                       todoList.innerHTML = ''; // Очистить список задач на клиенте
-                             fetchTasks(); // Обновить список задач после успешного удаления
-                      });
-                    }
-                  });
-
+                if (confirm('Are you sure you want to clear all tasks?')) {
+                    fetch('/tasks', { method: 'DELETE' })
+                    .then(() => {
+                        todoList.innerHTML = ''; // Очистить список задач на клиенте
+                        fetchTasks(); // Обновить список задач после успешного удаления
+                    });
+                }
+            });
 
             filterButtons.forEach(button => {
                 button.addEventListener('click', function() {
@@ -145,9 +144,26 @@
                         });
                     }
                 });
+
+                // Добавляем обработчик для кнопки удаления задачи
+                const deleteButton = taskItem.querySelector('.delete-btn');
+                deleteButton.addEventListener('click', function() {
+                    const taskId = taskItem.dataset.taskId;
+                    fetch(`/tasks/${taskId}`, {
+                        method: 'DELETE'
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            // Если задача успешно удалена с сервера, удаляем ее из списка на клиенте
+                            taskItem.remove();
+                        } else {
+                            console.error('Failed to delete task');
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+                });
             }
         });
     </script>
 </body>
 </html>
-

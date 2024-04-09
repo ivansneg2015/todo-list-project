@@ -41,16 +41,22 @@ app.put('/tasks/:id', (req, res) => {
     }
 });
 
+app.delete('/tasks', (req, res) => {
+    tasks = []; // Удалить все задачи
+    res.status(204).end();
+});
+
 app.delete('/tasks/:id', (req, res) => {
     const taskId = parseInt(req.params.id);
-    tasks = tasks.filter(task => task.id !== taskId);
-    res.status(204).end();
+    if (!isNaN(taskId)) {
+        tasks = tasks.filter(task => task.id !== taskId);
+        res.status(204).end();
+    } else {
+        // Если ID задачи не предоставлен, возвращаем 400 (Bad Request)
+        res.status(400).json({ error: 'Task ID is required' });
+    }
 });
 
 app.listen(port, () => {
     console.log(`Server is listening at http://localhost:${port}`);
-});
-app.delete('/tasks', (req, res) => {
-    tasks = []; // Удалить все задачи
-    res.status(204).end();
 });
